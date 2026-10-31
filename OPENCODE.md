@@ -114,11 +114,14 @@ npm run build
 | Kalit | Izoh |
 |---|---|
 | `SECRET_KEY` | Django maxfiy kaliti |
-| `APP_VERSION` | Ixtiyoriy; berilmasa `1.0.0` |
+| `APP_VERSION` | Ixtiyoriy; berilmasa `1.1.0` |
 | `DEBUG` | `1` lokal, `0` production |
 | `ALLOWED_HOSTS` | Vergul bilan |
-| `FRONTEND_URL` | QR public URL va CORS uchun |
+| `FRONTEND_URL` | QR public URL va CORS uchun (default `https://qrfeedback.webstorm.uz`) |
+| `BACKEND_URL` | Backend domeni (`https://qrfeedbackbackend.webstorm.uz`) |
+| `DATABASE_URL` | Railway PostgreSQL ulanishi (berilsa `USE_SQLITE`dan ustun) |
 | `USE_SQLITE` | `1` — SQLite, `0` — PostgreSQL |
+| `MEDIA_ROOT` | Fayllar papkasi; Railway volume uchun `/app/media` |
 | `POSTGRES_*` | PostgreSQL ulanishi |
 | `REDIS_URL` | Channels/Celery; bo‘sh bo‘lsa in-memory/eager |
 | `CELERY_EAGER` | `1` lokal sinov |
@@ -126,7 +129,9 @@ npm run build
 | `EMAIL_*` | Email backend |
 
 `frontend/.env`:
-- `VITE_API_URL=` — dev’da bo‘sh; productionda API domeni (masalan `https://api.example.uz`).
+- `VITE_API_URL=` — dev’da bo‘sh; productionda API domeni.
+- `.env.production` da `VITE_API_URL=https://qrfeedbackbackend.webstorm.uz` (Railway build uchun).
+- Railway: backend `PORT` bo‘yicha ishga tushadi (`start.sh`), frontend nginx ham `PORT`ni tinglaydi.
 
 ## 7. Rollar va huquqlar
 

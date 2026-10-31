@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/) · Versiya: SemVer (`MAJ
 ### Qo‘shildi
 - Telegram bot endi murojaatga biriktirilgan rasm va videolarni ham yuboradi.
 - Rasm `sendPhoto`, video `sendVideo` orqali yuboriladi; format qabul qilinmasa `sendDocument` zaxira usuli ishlatiladi.
+- Railway deployment: `DATABASE_URL` (PostgreSQL) qo‘llab-quvvatlanadi, `PORT` bo‘yicha ishga tushish, `railway.json` va `start.sh`.
+- Domenlar sozlandi: `qrfeedback.webstorm.uz` (frontend) va `qrfeedbackbackend.webstorm.uz` (backend) uchun `ALLOWED_HOSTS`, CORS, CSRF va `VITE_API_URL`.
+- `MEDIA_ROOT` muhit o‘zgaruvchisi (Railway volume uchun).
 
 ## [1.0.0] — 2026-10-30
 

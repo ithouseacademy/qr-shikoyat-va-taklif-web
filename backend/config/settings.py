@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,8 +26,13 @@ def env_list(key, default=''):
 SECRET_KEY = env('SECRET_KEY', 'dev-insecure-change-me')
 APP_VERSION = env('APP_VERSION', '1.1.0')
 DEBUG = env('DEBUG', '1') == '1'
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
-FRONTEND_URL = env('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+FRONTEND_URL = env('FRONTEND_URL', 'https://qrfeedback.webstorm.uz').rstrip('/')
+BACKEND_URL = env('BACKEND_URL', 'https://qrfeedbackbackend.webstorm.uz').rstrip('/')
+_HOSTS_DEFAULT = (
+    'localhost,127.0.0.1,qrfeedback.webstorm.uz,qrfeedbackbackend.webstorm.uz,'
+    '.up.railway.app,.railway.app'
+)
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', _HOSTS_DEFAULT)
 
 INSTALLED_APPS = [
     'daphne',
@@ -60,14 +66,35 @@ TEMPLATES = [{
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Lokal sinash: SQLite (standart). Serverda .env ichida USE_SQLITE=0 qilib PostgreSQL yoqiladi.
-if env('USE_SQLITE', '1') == '1':
+def _postgres_from_url(url):
+    """Railway/Heroku uslubidagi DATABASE_URL ni Django sozlamasiga aylantiradi."""
+    u = urlparse(url)
+    if u.scheme not in ('postgres', 'postgresql'):
+        return None
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': (u.path or '/railway').lstrip('/') or 'railway',
+        'USER': unquote(u.username or ''),
+        'PASSWORD': unquote(u.password or ''),
+        'HOST': u.hostname or '',
+        'PORT': str(u.port or 5432),
+        'CONN_MAX_AGE': 60,
+    }
+
+
+# Railway PostgreSQL ulanishi DATABASE_URL orqali avtomatik beriladi.
+# Lokal sinash: SQLite (standart). Serverda USE_SQLITE=0 yoki DATABASE_URL bilan PostgreSQL.
+DATABASE_URL = env('DATABASE_URL', '')
+_db_from_url = _postgres_from_url(DATABASE_URL) if DATABASE_URL else None
+if _db_from_url:
+    DATABASES = {'default': _db_from_url}
+elif env('USE_SQLITE', '1') == '1':
     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 else:
     DATABASES = {'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('POSTGRES_DB', 'qrfeedback'), 'USER': env('POSTGRES_USER', 'qrfeedback'),
-        'PASSWORD': env('POSTGRES_PASSWORD', 'qrfeedback'), 'HOST': env('POSTGRES_HOST', 'localhost'),
+        'NAME': env('POSTGRES_DB', 'railway'), 'USER': env('POSTGRES_USER', 'postgres'),
+        'PASSWORD': env('POSTGRES_PASSWORD', ''), 'HOST': env('POSTGRES_HOST', 'localhost'),
         'PORT': env('POSTGRES_PORT', '5432'), 'CONN_MAX_AGE': 60,
     }}
 
@@ -87,7 +114,8 @@ STORAGES = {
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
 }
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# Railway'da volume ulanganda MEDIA_ROOT=/app/media (yoki boshqa yo'l) beriladi.
+MEDIA_ROOT = Path(env('MEDIA_ROOT', str(BASE_DIR / 'media')))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
@@ -108,8 +136,12 @@ SIMPLE_JWT = {'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30), 'REFRESH_TOKEN_LIF
               'ROTATE_REFRESH_TOKENS': True}
 
 CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', FRONTEND_URL)
+CORS_ALLOWED_ORIGIN_REGEXES = [r'^https://[\w-]+\.up\.railway\.app$']
 CORS_ALLOW_HEADERS = ['accept', 'authorization', 'content-type', 'idempotency-key', 'x-requested-with']
-CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', FRONTEND_URL)
+CSRF_TRUSTED_ORIGINS = env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    f'{FRONTEND_URL},{BACKEND_URL},https://*.up.railway.app,https://*.railway.app',
+)
 
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

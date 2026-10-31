@@ -41,6 +41,30 @@ celery -A config worker -l info
 celery -A config beat -l info      # eskirgan push subscription tozalash
 ```
 
+## Railway deployment (PostgreSQL)
+
+Loyiha tayyor sozlangan: backend `DATABASE_URL` ni avtomatik o‘qiydi, `PORT` bo‘yicha ishga tushadi,
+frontend build’da `VITE_API_URL=https://qrfeedbackbackend.webstorm.uz` ishlatiladi.
+
+1. Railway’da **Postgres** plagini qo‘shing (backend servisiga ulanadi, `DATABASE_URL` avtomatik beriladi).
+2. **Backend servisi:** Root Directory = `backend`. Env:
+   ```
+   SECRET_KEY=<uzun tasodifiy>
+   DEBUG=0
+   ALLOWED_HOSTS=qrfeedback.webstorm.uz,qrfeedbackbackend.webstorm.uz,.up.railway.app
+   FRONTEND_URL=https://qrfeedback.webstorm.uz
+   BACKEND_URL=https://qrfeedbackbackend.webstorm.uz
+   CSRF_TRUSTED_ORIGINS=https://qrfeedback.webstorm.uz,https://qrfeedbackbackend.webstorm.uz
+   CORS_ALLOWED_ORIGINS=https://qrfeedback.webstorm.uz
+   MEDIA_ROOT=/app/media
+   ```
+   Fayllar saqlanishi uchun `/app/media` ga **Volume** ulang (Railway fayl tizimi vaqtinchalik).
+3. **Frontend servisi:** Root Directory = `frontend`, domen `qrfeedback.webstorm.uz`.
+4. Real-time/push uchun **Redis** plagini qo‘shsangiz, `REDIS_URL` ni backendga bering va alohida
+   **worker** servisi oching: start command `sh start.sh worker` (Root Directory = `backend`).
+   Redis bo‘lmasa `CELERY_EAGER=1` bo‘lib qoladi va vazifalar web jarayonda bajariladi.
+5. `https://qrfeedbackbackend.webstorm.uz/api/version/` javobini va `/app/about` dagi versiyani tekshiring.
+
 ## Docker bilan deployment
 ```bash
 cp backend/.env.example backend/.env    # SECRET_KEY, DEBUG=0, ALLOWED_HOSTS, FRONTEND_URL, VAPID_*, CORS/CSRF ni to'ldiring
