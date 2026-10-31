@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://qrfeedback.webstorm.uz/sitemap.xml
