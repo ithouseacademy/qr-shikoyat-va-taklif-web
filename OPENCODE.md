@@ -1,6 +1,6 @@
 # QR Feedback Platform — loyiha qo‘llanmasi
 
-> **Versiya:** 1.0.0 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
+> **Versiya:** 1.1.0 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
 > Bu fayl loyiha haqidagi to‘liq ma’lumot, versiyalash qoidalari va kelgusi AI/developer uchun
 > yo‘riqnoma. Har qanday o‘zgarishdan oldin shu faylni o‘qing va oxirida tegishli bo‘limlarni yangilang.
 
@@ -303,6 +303,7 @@ Versiya quyidagi joylarda bir xil bo‘lishi shart:
 
 | Versiya | Sana | Izoh |
 |---|---|---|
+| 1.1.0 | 2026-10-31 | Telegram botga murojaat rasm/videolarini yuborish |
 | 1.0.0 | 2026-10-30 | Birinchi rasmiy versiya: multi-tenant, QR, murojaatlar, fayllar, ijtimoiy tarmoqlar, PWA, push, versiyalash |
 
 Batafsil: `CHANGELOG.md`.

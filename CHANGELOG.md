@@ -3,6 +3,12 @@
 Barcha muhim o‘zgarishlar shu faylda yuritiladi.
 Format: [Keep a Changelog](https://keepachangelog.com/) · Versiya: SemVer (`MAJOR.MINOR.PATCH`).
 
+## [1.1.0] — 2026-10-31
+
+### Qo‘shildi
+- Telegram bot endi murojaatga biriktirilgan rasm va videolarni ham yuboradi.
+- Rasm `sendPhoto`, video `sendVideo` orqali yuboriladi; format qabul qilinmasa `sendDocument` zaxira usuli ishlatiladi.
+
 ## [1.0.0] — 2026-10-30
 
 Birinchi rasmiy versiya. WEBSTORM IT tomonidan ishlab chiqilgan.

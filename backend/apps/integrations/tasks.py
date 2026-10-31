@@ -1,4 +1,5 @@
 import logging
+import os
 import requests
 from celery import shared_task
 from django.conf import settings
@@ -6,12 +7,47 @@ from django.core.mail import send_mail
 
 log = logging.getLogger(__name__)
 
+VIDEO_EXTENSIONS = {'.mp4', '.webm', '.mov', '.m4v', '.ogg'}
+
 
 @shared_task(bind=True, max_retries=3)
 def send_telegram(self, token, chat_id, text):
     try:
         r = requests.post(f'https://api.telegram.org/bot{token}/sendMessage',
                           json={'chat_id': chat_id, 'text': text}, timeout=10)
+        if r.status_code >= 500:
+            raise RuntimeError(r.text)
+        return r.status_code
+    except Exception as e:
+        raise self.retry(exc=e, countdown=30 * 2 ** self.request.retries)
+
+
+def _post_media(token, chat_id, file_path, method, field, caption=''):
+    with open(file_path, 'rb') as fh:
+        data = {'chat_id': chat_id}
+        if caption:
+            data['caption'] = caption[:1024]
+        return requests.post(
+            f'https://api.telegram.org/bot{token}/{method}',
+            data=data, files={field: (os.path.basename(file_path), fh)}, timeout=60)
+
+
+@shared_task(bind=True, max_retries=3)
+def send_telegram_media(self, token, chat_id, file_path, caption=''):
+    """Murojaatga biriktirilgan rasm/videoni Telegramga yuboradi.
+
+    Rasm -> sendPhoto, video -> sendVideo. Agar Telegram formatni qabul qilmasa,
+    fayl sendDocument orqali yuboriladi.
+    """
+    try:
+        if not file_path or not os.path.exists(file_path):
+            log.warning('Telegram media topilmadi: %s', file_path)
+            return 0
+        is_video = os.path.splitext(file_path)[1].lower() in VIDEO_EXTENSIONS
+        method, field = ('sendVideo', 'video') if is_video else ('sendPhoto', 'photo')
+        r = _post_media(token, chat_id, file_path, method, field, caption)
+        if r.status_code >= 400:
+            r = _post_media(token, chat_id, file_path, 'sendDocument', 'document', caption)
         if r.status_code >= 500:
             raise RuntimeError(r.text)
         return r.status_code
@@ -40,6 +76,15 @@ def deliver_external(feedback_id):
     tg = getattr(org, 'telegram', None)
     if tg and tg.enabled and tg.bot_token and tg.chat_id:
         send_telegram.delay(tg.bot_token, tg.chat_id, text)
+        for att in fb.attachments.all():
+            if not att.file:
+                continue
+            try:
+                path = att.file.path
+            except (NotImplementedError, ValueError):
+                log.warning('Fayl lokal saqlanmagan, Telegramga yuborilmadi: %s', att.file.name)
+                continue
+            send_telegram_media.delay(tg.bot_token, tg.chat_id, path, fb.number)
     em = getattr(org, 'email_integration', None)
     if em and em.enabled and em.recipients.strip():
         rec = [e.strip() for e in em.recipients.split(',') if e.strip()]

@@ -23,7 +23,7 @@ def env_list(key, default=''):
 
 
 SECRET_KEY = env('SECRET_KEY', 'dev-insecure-change-me')
-APP_VERSION = env('APP_VERSION', '1.0.0')
+APP_VERSION = env('APP_VERSION', '1.1.0')
 DEBUG = env('DEBUG', '1') == '1'
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
 FRONTEND_URL = env('FRONTEND_URL', 'http://localhost:5173').rstrip('/')
