@@ -145,7 +145,8 @@ class PublicQRView(APIView):
         return Response({
             'organization': {'name': o.name, 'slug': o.slug, 'logo': o.logo.url if o.logo else None,
                              'primary_color': s.primary_color, 'welcome_text': s.welcome_text, 'contact_phone': s.contact_phone,
-                             'contact_email': s.contact_email, 'address': s.address, 'social_links': s.social_links or []},
+                             'contact_email': s.contact_email, 'address': s.address, 'social_links': s.social_links or [],
+                             'menu_links': s.menu_links or []},
             'branch': qr.branch.name if qr.branch else None,
             'department': qr.department.name if qr.department else None,
             'location': qr.location,

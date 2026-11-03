@@ -11,6 +11,7 @@ import { Reports, Statistics } from './pages/Analytics'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import SocialNetworks from './pages/SocialNetworks'
+import MenuLinks from './pages/MenuLinks'
 import PublicFeedback, { Track } from './pages/PublicFeedback'
 import About from './pages/About'
 import { SuperAudit, SuperLayout, SuperOrgs, SuperStats, SuperUsers } from './pages/SuperAdmin'
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="complaints" element={<Feedbacks type="complaint" title="Shikoyatlar" />} />
           <Route path="qr" element={<QRCodes />} />
           <Route path="social" element={<SocialNetworks />} />
+          <Route path="menu" element={<MenuLinks />} />
           <Route path="branches" element={<Branches />} />
           <Route path="departments" element={<Departments />} />
           <Route path="staff" element={<Staff />} />

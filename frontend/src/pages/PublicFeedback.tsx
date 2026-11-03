@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { CheckCircle2, ImagePlus, Lightbulb, Lock, MessageSquareWarning, Phone, Play, Share2, Star, MapPin } from 'lucide-react'
+import { CheckCircle2, ExternalLink, ImagePlus, Lightbulb, Lock, MessageSquareWarning, Phone, Play, Share2, Star, MapPin } from 'lucide-react'
 import { api, errMsg } from '../services/api'
 import { enqueue, flushQueue } from '../services/offlineQueue'
 import { SocialIcon } from '../utils/social'
@@ -51,6 +51,7 @@ export default function PublicFeedback() {
   const d = q.data, o = d.organization, brand = o.primary_color || '#2563EB'
   const cats = d.categories.filter((c: any) => c.kind === 'both' || c.kind === mode)
   const social = o.social_links || []
+  const menuLinks = (o.menu_links || []).filter((l: any) => l?.url && l?.name)
   const actions: any[] = [['suggestion', 'Taklif yuborish', Lightbulb], ['complaint', 'Shikoyat yuborish', MessageSquareWarning], ['rating', 'Xizmatni baholash', Star]]
   if (social.length) actions.push(['social', 'Ijtimoiy tarmoqlar', Share2])
   const set = (k: string, v: any) => setForm({ ...form, [k]: v })
@@ -105,6 +106,11 @@ export default function PublicFeedback() {
             </div>
           </div>}
           <div className="space-y-3">
+            {menuLinks.map((l: any, i: number) => (
+              <a key={`menu-${i}`} href={l.url} target="_blank" rel="noreferrer" className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left active:scale-[.99]">
+                <span className="rounded-xl p-2 text-white" style={{ background: brand }}><ExternalLink size={22} /></span>
+                <span className="font-medium">{l.name}</span>
+              </a>))}
             {actions.map(([m, l, I]: any) => (
               <button key={m} onClick={() => setMode(m)} className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left active:scale-[.99]"><span className="rounded-xl p-2 text-white" style={{ background: brand }}><I size={22} /></span><span className="font-medium">{l}</span></button>))}
           </div>

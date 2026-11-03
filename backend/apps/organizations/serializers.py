@@ -22,7 +22,8 @@ class TenantSerializer(serializers.ModelSerializer):
 class OrgSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationSettings
-        fields = ['primary_color', 'welcome_text', 'contact_phone', 'contact_email', 'address', 'social_links']
+        fields = ['primary_color', 'welcome_text', 'contact_phone', 'contact_email', 'address',
+                  'social_links', 'menu_links']
 
     def validate_primary_color(self, v):
         import re
@@ -52,6 +53,27 @@ class OrgSettingsSerializer(serializers.ModelSerializer):
             except Exception:
                 raise serializers.ValidationError(f'{i}-havola manzili noto‘g‘ri (http:// yoki https:// bilan boshlansin)')
             cleaned.append({'platform': platform, 'name': name or platform.title(), 'url': url})
+        return cleaned
+
+    def validate_menu_links(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Ro‘yxat bo‘lishi kerak')
+        if len(value) > 20:
+            raise serializers.ValidationError('Ko‘pi bilan 20 ta havola')
+        url_ok = URLValidator(schemes=['http', 'https'])
+        cleaned = []
+        for i, item in enumerate(value, 1):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(f'{i}-qator noto‘g‘ri')
+            name = str(item.get('name', '')).strip()[:40]
+            url = str(item.get('url', '')).strip()[:500]
+            if not url:
+                continue
+            try:
+                url_ok(url)
+            except Exception:
+                raise serializers.ValidationError(f'{i}-havola manzili noto‘g‘ri (http:// yoki https:// bilan boshlansin)')
+            cleaned.append({'name': name or 'Menyu', 'url': url})
         return cleaned
 
 

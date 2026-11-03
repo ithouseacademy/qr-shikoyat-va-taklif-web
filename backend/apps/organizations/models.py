@@ -26,6 +26,7 @@ class OrganizationSettings(models.Model):
     contact_email = models.EmailField(blank=True)
     address = models.CharField(max_length=250, blank=True)
     social_links = models.JSONField(default=list, blank=True)
+    menu_links = models.JSONField(default=list, blank=True)
 
 
 class OrganizationMembership(models.Model):

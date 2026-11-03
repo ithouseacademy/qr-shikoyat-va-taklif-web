@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { BarChart3, Bell, Building2, ChevronDown, FileText, GitBranch, Home, Inbox, Info, Lightbulb, LogOut, Menu, MessageSquareWarning, QrCode, Settings, Share2, Users, X } from 'lucide-react'
+import { BarChart3, Bell, Building2, ChevronDown, FileText, GitBranch, Home, Inbox, Info, Lightbulb, Link2, LogOut, Menu, MessageSquareWarning, QrCode, Settings, Share2, Users, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotificationSocket, useUnread } from '../hooks/useNotifications'
 import { api } from '../services/api'
@@ -24,6 +24,7 @@ const NAV_SECTIONS = [
     title: 'Boshqaruv',
     items: [
       { to: '/app/qr', label: 'QR kodlar', icon: QrCode },
+      { to: '/app/menu', label: 'Menyu havolalari', icon: Link2, roles: ['owner', 'admin'] },
       { to: '/app/social', label: 'Ijtimoiy tarmoqlar', icon: Share2, roles: ['owner', 'admin'] },
       { to: '/app/branches', label: 'Filiallar', icon: GitBranch, roles: ['owner', 'admin', 'manager'] },
       { to: '/app/departments', label: 'Bo‘limlar', icon: Building2 },
@@ -101,7 +102,7 @@ export default function DashboardLayout() {
         </div>
         <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {NAV_SECTIONS.map((section) => {
-            const items = section.items.filter((n) => !n.roles || can(...n.roles))
+            const items = section.items.filter((n: any) => !n.roles || can(...n.roles))
             if (!items.length) return null
             return (
               <div key={section.title} className="pt-3 first:pt-2">
@@ -110,7 +111,7 @@ export default function DashboardLayout() {
                   <ChevronDown size={13} className={`transition-transform duration-200 ${expanded[section.title] ? '' : '-rotate-90'}`} />
                 </button>
                 {expanded[section.title] && <div className="mt-1 space-y-0.5">
-                  {items.map((n) => (
+                  {items.map((n: any) => (
                     <NavLink key={n.to} to={n.to} end={n.end} onClick={() => setOpen(false)} className={({ isActive }) => `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition ${isActive ? 'bg-white/[0.08] text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'}`}>
                       {({ isActive }) => (<>
                         <span className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-primary transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
