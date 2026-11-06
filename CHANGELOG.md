@@ -3,6 +3,15 @@
 Barcha muhim o‘zgarishlar shu faylda yuritiladi.
 Format: [Keep a Changelog](https://keepachangelog.com/) · Versiya: SemVer (`MAJOR.MINOR.PATCH`).
 
+## [1.2.0] — 2026-11-06
+
+### Qo‘shildi
+- QR havolalar endi admin qaysi frontend domenidan kirganiga qarab quriladi: `qrfeedback.webstorm.uz` yoki `qrcode.ithouse.academy`.
+- API’dagi `public_url`, QR rasm va PDF ham shu domen bilan qaytariladi.
+
+### Tuzatildi
+- `qrcode.ithouse.academy` orqali kirganda QR kodlar noto‘g‘ri `webstorm.uz` domeniga yo‘naltirilishi.
+
 ## [1.1.0] — 2026-10-31
 
 ### Qo‘shildi

@@ -24,7 +24,7 @@ def env_list(key, default=''):
 
 
 SECRET_KEY = env('SECRET_KEY', 'dev-insecure-change-me')
-APP_VERSION = env('APP_VERSION', '1.1.0')
+APP_VERSION = env('APP_VERSION', '1.2.0')
 DEBUG = env('DEBUG', '1') == '1'
 # Asosiy frontend URL (QR havolalari, parol tiklash, Telegram xabarlari uchun).
 FRONTEND_URL = env('FRONTEND_URL', 'https://qrfeedback.webstorm.uz').rstrip('/')

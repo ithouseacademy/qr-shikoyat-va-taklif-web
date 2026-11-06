@@ -14,7 +14,7 @@ HEX = re.compile(r'#[0-9a-fA-F]{6}')
 
 class QRCodeSerializer(TenantSerializer):
     tenant_fields = ('branch', 'department')
-    public_url = serializers.CharField(read_only=True)
+    public_url = serializers.SerializerMethodField()
     scans_count = serializers.IntegerField(read_only=True)
     feedback_count = serializers.IntegerField(read_only=True)
     branch_name = serializers.CharField(source='branch.name', default='', read_only=True)
@@ -25,6 +25,9 @@ class QRCodeSerializer(TenantSerializer):
         fields = ['id', 'name', 'branch', 'branch_name', 'department', 'department_name', 'location', 'token', 'public_url',
                   'color', 'bg_color', 'use_logo', 'is_active', 'scans_count', 'feedback_count', 'created_at']
         read_only_fields = ['token']
+
+    def get_public_url(self, obj):
+        return obj.public_url_for(self.context.get('request'))
 
     def validate_color(self, v):
         if not HEX.fullmatch(v):
@@ -46,7 +49,7 @@ class QRCodeViewSet(TenantMixin, viewsets.ModelViewSet):
     def image(self, request, pk=None):
         qr = self.get_object()
         fmt = 'pdf' if request.query_params.get('format') == 'pdf' else 'png'
-        data, ctype = render_qr(qr, fmt)
+        data, ctype = render_qr(qr, fmt, public_url=qr.public_url_for(request))
         resp = HttpResponse(data, content_type=ctype)
         if request.query_params.get('download'):
             resp['Content-Disposition'] = f'attachment; filename="qr-{qr.token}.{fmt}"'

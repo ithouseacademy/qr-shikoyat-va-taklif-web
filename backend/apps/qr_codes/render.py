@@ -4,9 +4,9 @@ from PIL import Image, ImageDraw, ImageFont
 from qrcode.constants import ERROR_CORRECT_H
 
 
-def render_qr(qr, fmt='png'):
+def render_qr(qr, fmt='png', public_url=None):
     q = qrcode.QRCode(error_correction=ERROR_CORRECT_H, box_size=12, border=2)
-    q.add_data(qr.public_url)
+    q.add_data(public_url or qr.public_url)
     q.make(fit=True)
     img = q.make_image(fill_color=qr.color, back_color=qr.bg_color).convert('RGB')
     logo = qr.organization.logo

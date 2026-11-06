@@ -1,6 +1,6 @@
 # QR Feedback Platform — loyiha qo‘llanmasi
 
-> **Versiya:** 1.1.0 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
+> **Versiya:** 1.2.0 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
 > Bu fayl loyiha haqidagi to‘liq ma’lumot, versiyalash qoidalari va kelgusi AI/developer uchun
 > yo‘riqnoma. Har qanday o‘zgarishdan oldin shu faylni o‘qing va oxirida tegishli bo‘limlarni yangilang.
 
@@ -114,10 +114,11 @@ npm run build
 | Kalit | Izoh |
 |---|---|
 | `SECRET_KEY` | Django maxfiy kaliti |
-| `APP_VERSION` | Ixtiyoriy; berilmasa `1.1.0` |
+| `APP_VERSION` | Ixtiyoriy; berilmasa `1.2.0` |
 | `DEBUG` | `1` lokal, `0` production |
 | `ALLOWED_HOSTS` | Vergul bilan |
-| `FRONTEND_URL` | QR public URL va CORS uchun (default `https://qrfeedback.webstorm.uz`) |
+| `FRONTEND_URL` | Standart QR public URL va CORS uchun (default `https://qrfeedback.webstorm.uz`) |
+| `EXTRA_FRONTEND_URLS` | Qo‘shimcha frontend domenlar (CORS/CSRF va QR havolalari uchun) |
 | `BACKEND_URL` | Backend domeni (`https://qrfeedbackbackend.webstorm.uz`) |
 | `DATABASE_URL` | Railway PostgreSQL ulanishi (berilsa `USE_SQLITE`dan ustun) |
 | `USE_SQLITE` | `1` — SQLite, `0` — PostgreSQL |
@@ -222,6 +223,13 @@ Super admin: `/super`, `/super/organizations`, `/super/users`, `/super/audit`.
 - Rasm `Pillow` bilan tekshiriladi; fayl nomi UUID bilan almashtiriladi.
 - Admin: ro‘yxatda thumbnail/film belgisi, detalda rasm yoki `<video controls>`.
 
+### QR havolalari va domenlar
+- QR havola admin qaysi frontend domenidan kirgan bo‘lsa, o‘sha domen bilan quriladi
+  (`qrfeedback.webstorm.uz` yoki `qrcode.ithouse.academy`).
+- Domen `Origin`/`Referer` orqali aniqlanadi va faqat `FRONTEND_URL` + `EXTRA_FRONTEND_URLS`
+  ro‘yxatidagi domenlarga ruxsat beriladi; aks holda `FRONTEND_URL` ishlatiladi.
+- QR rasm/PDF ham `public_url_for(request)` orqali bir xil domenni oladi.
+
 ### Media URL’lar (muhim!)
 - Backend har doim **nisbiy** `/media/...` URL qaytaradi. `build_absolute_uri` ishlatmang —
   Docker/Nginx va telefon sinovida `localhost` muammosi chiqadi.
@@ -308,6 +316,7 @@ Versiya quyidagi joylarda bir xil bo‘lishi shart:
 
 | Versiya | Sana | Izoh |
 |---|---|---|
+| 1.2.0 | 2026-11-06 | QR havolalar admin kirgan frontend domeni bo‘yicha quriladi |
 | 1.1.0 | 2026-10-31 | Telegram botga murojaat rasm/videolarini yuborish |
 | 1.0.0 | 2026-10-30 | Birinchi rasmiy versiya: multi-tenant, QR, murojaatlar, fayllar, ijtimoiy tarmoqlar, PWA, push, versiyalash |
 

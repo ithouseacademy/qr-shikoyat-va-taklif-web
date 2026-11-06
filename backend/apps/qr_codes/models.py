@@ -1,6 +1,7 @@
 import secrets
-from django.conf import settings
 from django.db import models
+
+from .utils import frontend_base_url
 
 
 def new_token():
@@ -23,9 +24,12 @@ class QRCode(models.Model):
     class Meta:
         ordering = ['-created_at']
 
+    def public_url_for(self, request=None):
+        return f"{frontend_base_url(request)}/{self.organization.slug}/qr/{self.token}"
+
     @property
     def public_url(self):
-        return f"{settings.FRONTEND_URL}/{self.organization.slug}/qr/{self.token}"
+        return self.public_url_for()
 
 
 class QRScan(models.Model):
