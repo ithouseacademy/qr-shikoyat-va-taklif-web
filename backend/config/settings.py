@@ -26,11 +26,15 @@ def env_list(key, default=''):
 SECRET_KEY = env('SECRET_KEY', 'dev-insecure-change-me')
 APP_VERSION = env('APP_VERSION', '1.1.0')
 DEBUG = env('DEBUG', '1') == '1'
+# Asosiy frontend URL (QR havolalari, parol tiklash, Telegram xabarlari uchun).
 FRONTEND_URL = env('FRONTEND_URL', 'https://qrfeedback.webstorm.uz').rstrip('/')
+# Qo'shimcha frontend domenlar (CORS/CSRF uchun), vergul bilan.
+EXTRA_FRONTEND_URLS = env_list('EXTRA_FRONTEND_URLS', 'https://qrcode.ithouse.academy')
+FRONTEND_URLS = list(dict.fromkeys([FRONTEND_URL, *EXTRA_FRONTEND_URLS]))
 BACKEND_URL = env('BACKEND_URL', 'https://qrfeedbackbackend.webstorm.uz').rstrip('/')
 _HOSTS_DEFAULT = (
-    'localhost,127.0.0.1,qrfeedback.webstorm.uz,qrfeedbackbackend.webstorm.uz,'
-    '.up.railway.app,.railway.app'
+    'localhost,127.0.0.1,qrfeedback.webstorm.uz,qrcode.ithouse.academy,'
+    'qrfeedbackbackend.webstorm.uz,.up.railway.app,.railway.app'
 )
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', _HOSTS_DEFAULT)
 
@@ -135,12 +139,15 @@ REST_FRAMEWORK = {
 SIMPLE_JWT = {'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30), 'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
               'ROTATE_REFRESH_TOKENS': True}
 
-CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', FRONTEND_URL)
-CORS_ALLOWED_ORIGIN_REGEXES = [r'^https://[\w-]+\.up\.railway\.app$']
+CORS_ALLOWED_ORIGINS = env_list('CORS_ALLOWED_ORIGINS', ','.join(FRONTEND_URLS))
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://[\w-]+\.up\.railway\.app$',
+    r'^https://([\w-]+\.)*ithouse\.academy$',
+]
 CORS_ALLOW_HEADERS = ['accept', 'authorization', 'content-type', 'idempotency-key', 'x-requested-with']
 CSRF_TRUSTED_ORIGINS = env_list(
     'CSRF_TRUSTED_ORIGINS',
-    f'{FRONTEND_URL},{BACKEND_URL},https://*.up.railway.app,https://*.railway.app',
+    ','.join([*FRONTEND_URLS, BACKEND_URL, 'https://*.up.railway.app', 'https://*.railway.app']),
 )
 
 if not DEBUG:
