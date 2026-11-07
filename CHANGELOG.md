@@ -3,6 +3,12 @@
 Barcha muhim o‘zgarishlar shu faylda yuritiladi.
 Format: [Keep a Changelog](https://keepachangelog.com/) · Versiya: SemVer (`MAJOR.MINOR.PATCH`).
 
+## [1.4.2] — 2026-11-07
+
+### Qo‘shildi
+- `create_superadmin` management buyrug‘i (env yoki `--email/--password`).
+- Railway’da `SUPERADMIN_EMAIL` va `SUPERADMIN_PASSWORD` berilsa, `start.sh` super adminni avtomatik yaratadi/yangilaydi.
+
 ## [1.4.1] — 2026-11-07
 
 ### O‘zgartirildi

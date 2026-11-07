@@ -1,5 +1,5 @@
 /* Service Worker: PWA kesh + Web Push */
-const VERSION = 'v1.4.1'
+const VERSION = 'v1.4.2'
 const STATIC_CACHE = `static-${VERSION}`
 const PAGES_CACHE = `pages-${VERSION}`
 const SHELL = ['/', '/offline.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png']

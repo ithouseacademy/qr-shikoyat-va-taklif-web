@@ -1,6 +1,6 @@
 # QR Feedback Platform — loyiha qo‘llanmasi
 
-> **Versiya:** 1.4.1 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
+> **Versiya:** 1.4.2 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
 > Bu fayl loyiha haqidagi to‘liq ma’lumot, versiyalash qoidalari va kelgusi AI/developer uchun
 > yo‘riqnoma. Har qanday o‘zgarishdan oldin shu faylni o‘qing va oxirida tegishli bo‘limlarni yangilang.
 
@@ -114,7 +114,7 @@ npm run build
 | Kalit | Izoh |
 |---|---|
 | `SECRET_KEY` | Django maxfiy kaliti |
-| `APP_VERSION` | Ixtiyoriy; berilmasa `1.3.0` |
+| `APP_VERSION` | Ixtiyoriy; berilmasa `1.4.2` |
 | `DEBUG` | `1` lokal, `0` production |
 | `ALLOWED_HOSTS` | Vergul bilan |
 | `FRONTEND_URL` | Standart QR public URL va CORS uchun (default `https://qrfeedback.webstorm.uz`) |
@@ -128,6 +128,13 @@ npm run build
 | `CELERY_EAGER` | `1` lokal sinov |
 | `VAPID_*` | Web Push kalitlari (`python manage.py generate_vapid`) |
 | `EMAIL_*` | Email backend |
+| `SUPERADMIN_EMAIL` | Production super admin emaili (berilsa `start.sh` avtomatik yaratadi/yangilaydi) |
+| `SUPERADMIN_PASSWORD` | Production super admin paroli |
+| `SUPERADMIN_NAME` | Ixtiyoriy; super admin ismi (default `Super Admin`) |
+
+- Railway’da birinchi marta kirish uchun `SUPERADMIN_EMAIL` va `SUPERADMIN_PASSWORD` ni Variables’ga
+  qo‘shib redeploy qiling — `start.sh` `create_superadmin` ni ishga tushirib akkauntni yaratadi.
+- Qo‘lda: `python manage.py create_superadmin --email a@b.uz --password '...'`.
 
 `frontend/.env`:
 - `VITE_API_URL=` — dev’da bo‘sh; productionda API domeni.
@@ -335,6 +342,7 @@ Versiya quyidagi joylarda bir xil bo‘lishi shart:
 
 | Versiya | Sana | Izoh |
 |---|---|---|
+| 1.4.2 | 2026-11-07 | Railway uchun `create_superadmin` va env orqali avtomatik super admin yaratish |
 | 1.4.1 | 2026-11-07 | `/app/settings` dan “Mijoz formasi” bo‘limi olib tashlandi |
 | 1.4.0 | 2026-11-07 | Super admin foydalanuvchi oynasidan tashkilot brending footerini o‘chirishi mumkin (`show_branding`) |
 | 1.3.0 | 2026-11-06 | Cheksiz Telegram chat ID, mijoz formasi maydonlari va hal qilindi izohi |
@@ -352,6 +360,11 @@ Batafsil: `CHANGELOG.md`.
 - Brauzer xotirasi tozalansa, “oxirgi murojaat holati” eslatmasi yo‘qoladi.
 - Service worker eski fayllarni keshlashi mumkin — `sw.js` `VERSION` ni oshiring yoki hard refresh.
 - Docker/Nginx: `/media` proksi qilingan; `client_max_body_size 50m`.
+- **Railway media (muhim):** konteyner fayl tizimi vaqtinchalik — volume bo‘lmasa yuklangan logo/rasmlar
+  redeploy’da o‘chib ketadi. Railway → backend service → **Volumes → Add Volume → Mount path `/app/media`**
+  qo‘shing va `MEDIA_ROOT=/app/media` ekanini tekshiring. `worker` alohida service bo‘lsa, u ham shu
+  volume’dagi fayllarni ko‘rishi kerak (Railway volume bitta service’ga ulanadi — kerak bo‘lsa workerni
+  backend ichida yoki S3/R2 obyekt xotirasiga o‘tkazing).
 - `media/` fayllar git’ga qo‘shilmaydi.
 - SQLite lokal uchun; productionda PostgreSQL ishlating.
 
