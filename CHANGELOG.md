@@ -3,6 +3,34 @@
 Barcha muhim o‘zgarishlar shu faylda yuritiladi.
 Format: [Keep a Changelog](https://keepachangelog.com/) · Versiya: SemVer (`MAJOR.MINOR.PATCH`).
 
+## [1.4.1] — 2026-11-07
+
+### O‘zgartirildi
+- `/app/settings` dan “Mijoz formasi” bo‘limi olib tashlandi.
+
+## [1.4.0] — 2026-11-07
+
+### Qo‘shildi
+- Super Admin → “Foydalanuvchilar”da qatorni bosganda foydalanuvchi ma’lumotlari (ism, email, telefon, tashkilot, rol, holat, sanalar) ko‘rsatiladi.
+- Foydalanuvchi oynasida “WEBSTORM IT brendingini mijoz sahifasida ko‘rsatish” toggle’i (tashkilot bo‘yicha, faqat super admin).
+- `OrganizationSettings.show_branding` (standart `true`).
+
+### O‘zgartirildi
+- O‘chirilsa, o‘sha tashkilotning mijoz QR sahifasidagi “Dastur WEBSTORM IT kompaniyasiga tegishli” va “Dastur haqida” bloki umuman ko‘rinmaydi.
+
+## [1.3.0] — 2026-11-06
+
+### Qo‘shildi
+- Telegram bot endi cheksiz chat ID’ga yuboradi: bitta matn maydoni (vergul/yangi qator) va qulay ro‘yxat ko‘rinishi.
+- Mijoz formasida admin yoqadigan maydonlar: ism-familiya, shikoyat uchun “kim tomondan / kimga / sabab”.
+- Har bir maydon uchun alohida sozlama: ko‘rsatish, majburiylik.
+- “Hal qilindi” izohi: admin status o‘zgartirganda yozadi; mijozga ko‘rsatishni alohida yoqish mumkin.
+- Telegram xabarnomasiga mijoz ismi va shikoyat konteksti qo‘shildi.
+
+### O‘zgartirildi
+- `Feedback` modeliga `from_person`, `to_person`, `reason`, `resolution_note` maydonlari qo‘shildi.
+- Admin panelda (`/app/settings`) yangi “Mijoz formasi” bo‘limi.
+
 ## [1.2.0] — 2026-11-06
 
 ### Qo‘shildi

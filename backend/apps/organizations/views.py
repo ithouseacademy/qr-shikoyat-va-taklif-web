@@ -124,25 +124,57 @@ class AdminStatsView(APIView):
         })
 
 
-class AdminUserViewSet(mixins.ListModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+class AdminUserViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     permission_classes = [IsSuperAdmin]
     search_fields = ['email', 'full_name', 'phone']
 
     def get_queryset(self):
-        return User.objects.order_by('-date_joined')
+        return User.objects.prefetch_related('memberships__organization__settings').order_by('-date_joined')
 
     def get_serializer_class(self):
         from rest_framework import serializers
 
         class S(serializers.ModelSerializer):
             organization = serializers.SerializerMethodField()
+            organization_id = serializers.SerializerMethodField()
+            role = serializers.SerializerMethodField()
+            show_branding = serializers.SerializerMethodField()
 
             class Meta:
                 model = User
-                fields = ['id', 'email', 'phone', 'full_name', 'is_active', 'is_superuser', 'organization']
-                read_only_fields = ['id', 'email', 'phone', 'full_name', 'is_superuser', 'organization']
+                fields = ['id', 'email', 'phone', 'full_name', 'is_active', 'is_superuser',
+                          'organization', 'organization_id', 'role', 'show_branding',
+                          'date_joined', 'last_login']
+                read_only_fields = ['id', 'email', 'phone', 'full_name', 'is_superuser', 'date_joined', 'last_login']
+
+            def _membership(self, u):
+                return u.memberships.select_related('organization__settings').first()
 
             def get_organization(self, u):
-                m = u.memberships.select_related('organization').first()
+                m = self._membership(u)
                 return m.organization.name if m else None
+
+            def get_organization_id(self, u):
+                m = self._membership(u)
+                return m.organization_id if m else None
+
+            def get_role(self, u):
+                m = self._membership(u)
+                return m.role if m else None
+
+            def get_show_branding(self, u):
+                m = self._membership(u)
+                return m.organization.settings.show_branding if m else None
         return S
+
+    def perform_update(self, serializer):
+        raw = self.request.data.get('show_branding', None)
+        user = serializer.instance
+        super().perform_update(serializer)
+        if raw is not None:
+            m = user.memberships.select_related('organization__settings').first()
+            if m:
+                val = raw if isinstance(raw, bool) else str(raw).lower() in ('1', 'true', 'yes', 'on')
+                m.organization.settings.show_branding = val
+                m.organization.settings.save(update_fields=['show_branding'])
+                audit_log(self.request, 'admin_update_branding', m.organization, org=m.organization, meta={'show_branding': val})

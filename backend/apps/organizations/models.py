@@ -27,6 +27,16 @@ class OrganizationSettings(models.Model):
     address = models.CharField(max_length=250, blank=True)
     social_links = models.JSONField(default=list, blank=True)
     menu_links = models.JSONField(default=list, blank=True)
+    # Super admin boshqaradi: mijoz sahifasidagi WEBSTORM IT footerini ko'rsatish.
+    show_branding = models.BooleanField(default=True)
+    # Mijoz formasidagi ixtiyoriy maydonlar (admin yoqadi/o'chiradi).
+    collect_name = models.BooleanField(default=False)
+    require_name = models.BooleanField(default=False)
+    collect_complaint_context = models.BooleanField(default=False)
+    require_complaint_context = models.BooleanField(default=False)
+    collect_resolution = models.BooleanField(default=False)
+    require_resolution = models.BooleanField(default=False)
+    show_resolution = models.BooleanField(default=False)
 
 
 class OrganizationMembership(models.Model):

@@ -67,6 +67,14 @@ def deliver_external(feedback_id):
     lines = [head, where, f'Raqam: {fb.number}']
     if fb.category:
         lines.append(f'Kategoriya: {fb.category.name}')
+    if fb.name:
+        lines.append(f'Mijoz: {fb.name}')
+    if fb.from_person:
+        lines.append(f'Kim tomondan: {fb.from_person}')
+    if fb.to_person:
+        lines.append(f'Kimga: {fb.to_person}')
+    if fb.reason:
+        lines.append(f'Sabab: {fb.reason}')
     if fb.rating:
         lines.append(f'Baho: {fb.rating}/5')
     if fb.text:
@@ -74,17 +82,20 @@ def deliver_external(feedback_id):
     lines.append(f'{settings.FRONTEND_URL}/app/feedbacks/{fb.id}')
     text = '\n'.join(lines)
     tg = getattr(org, 'telegram', None)
-    if tg and tg.enabled and tg.bot_token and tg.chat_id:
-        send_telegram.delay(tg.bot_token, tg.chat_id, text)
+    chat_ids = tg.recipient_ids() if tg else []
+    if tg and tg.enabled and tg.bot_token and chat_ids:
+        paths = []
         for att in fb.attachments.all():
             if not att.file:
                 continue
             try:
-                path = att.file.path
+                paths.append(att.file.path)
             except (NotImplementedError, ValueError):
                 log.warning('Fayl lokal saqlanmagan, Telegramga yuborilmadi: %s', att.file.name)
-                continue
-            send_telegram_media.delay(tg.bot_token, tg.chat_id, path, fb.number)
+        for chat_id in chat_ids:
+            send_telegram.delay(tg.bot_token, chat_id, text)
+            for path in paths:
+                send_telegram_media.delay(tg.bot_token, chat_id, path, fb.number)
     em = getattr(org, 'email_integration', None)
     if em and em.enabled and em.recipients.strip():
         rec = [e.strip() for e in em.recipients.split(',') if e.strip()]

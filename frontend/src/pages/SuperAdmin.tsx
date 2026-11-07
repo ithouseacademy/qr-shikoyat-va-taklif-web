@@ -5,7 +5,7 @@ import { LogOut } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api, errMsg } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
-import { Empty, PageHeader, StatCard, TableSkeleton } from '../components/ui'
+import { Empty, Modal, PageHeader, StatCard, TableSkeleton } from '../components/ui'
 import { fmtDate } from '../utils'
 
 export function SuperLayout() {
@@ -42,18 +42,37 @@ export function SuperOrgs() {
   )
 }
 
+const ROLE_LABEL: Record<string, string> = { owner: 'Egasi', admin: 'Admin', manager: 'Menejer', employee: 'Xodim' }
+
 export function SuperUsers() {
   const qc = useQueryClient()
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const q = useQuery({ queryKey: ['admin-users'], queryFn: async () => (await api.get('/admin/users/', { params: { page_size: 100 } })).data.results })
+  const selected = q.data?.find((u: any) => u.id === selectedId)
   const t = useMutation({ mutationFn: (u: any) => api.patch(`/admin/users/${u.id}/`, { is_active: !u.is_active }), onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }), onError: (e) => toast.error(errMsg(e)) })
+  const branding = useMutation({
+    mutationFn: ({ id, value }: { id: number; value: boolean }) => api.patch(`/admin/users/${id}/`, { show_branding: value }),
+    onSuccess: () => { toast.success('Saqlandi'); qc.invalidateQueries({ queryKey: ['admin-users'] }); qc.invalidateQueries({ queryKey: ['public'] }) },
+    onError: (e) => toast.error(errMsg(e)),
+  })
   return <div><PageHeader title="Foydalanuvchilar" /><div className="card overflow-x-auto !p-0">{q.isLoading ? <TableSkeleton /> : (
     <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-muted"><tr>{['Ism', 'Email', 'Telefon', 'Tashkilot', 'Holat'].map((h) => <th key={h} className="px-3 py-3">{h}</th>)}</tr></thead>
-      <tbody>{q.data.map((u: any) => <tr key={u.id} className="border-t border-border"><td className="px-3 py-3">{u.full_name}</td><td className="px-3 py-3">{u.email}</td><td className="px-3 py-3">{u.phone || '—'}</td><td className="px-3 py-3">{u.organization || (u.is_superuser ? 'Super Admin' : '—')}</td>
-        <td className="px-3 py-3">{!u.is_superuser && <button className={u.is_active ? 'btn-ghost' : 'btn-primary'} onClick={() => t.mutate(u)}>{u.is_active ? 'Bloklash' : 'Faollashtirish'}</button>}</td></tr>)}</tbody></table>)}</div></div>
+      <tbody>{q.data.map((u: any) => <tr key={u.id} onClick={() => setSelectedId(u.id)} className="cursor-pointer border-t border-border hover:bg-slate-50"><td className="px-3 py-3">{u.full_name}</td><td className="px-3 py-3">{u.email}</td><td className="px-3 py-3">{u.phone || '—'}</td><td className="px-3 py-3">{u.organization || (u.is_superuser ? 'Super Admin' : '—')}</td>
+        <td className="px-3 py-3">{!u.is_superuser && <button className={u.is_active ? 'btn-ghost' : 'btn-primary'} onClick={(e) => { e.stopPropagation(); t.mutate(u) }}>{u.is_active ? 'Bloklash' : 'Faollashtirish'}</button>}</td></tr>)}</tbody></table>)}</div>
+    <Modal open={!!selected} onClose={() => setSelectedId(null)} title="Foydalanuvchi ma’lumoti">
+      {selected && <div className="space-y-2 text-sm">
+        {[['Ism-familiya', selected.full_name || '—'], ['Email', selected.email], ['Telefon', selected.phone || '—'], ['Tashkilot', selected.organization || (selected.is_superuser ? 'Super Admin' : '—')], ['Rol', selected.role ? (ROLE_LABEL[selected.role] || selected.role) : '—'], ['Holat', selected.is_active ? 'Faol' : 'Bloklangan'], ['Ro‘yxatdan o‘tgan', fmtDate(selected.date_joined)], ['Oxirgi kirish', selected.last_login ? fmtDate(selected.last_login) : '—']].map(([l, v]) => (
+          <div key={l} className="flex justify-between gap-3 border-b border-border py-1.5"><span className="text-muted">{l}</span><span className="text-right font-medium">{v}</span></div>))}
+        {selected.organization ? <div className="border-t border-border pt-3">
+          <label className="flex items-center gap-2 font-medium"><input type="checkbox" className="h-4 w-4" checked={!!selected.show_branding} disabled={branding.isPending} onChange={(e) => branding.mutate({ id: selected.id, value: e.target.checked })} />WEBSTORM IT brendingini mijoz sahifasida ko‘rsatish</label>
+          <p className="mt-1 text-xs text-muted">O‘chirilsa, bu tashkilotning mijoz QR sahifasidagi “WEBSTORM IT” va “Dastur haqida” bloki umuman ko‘rinmaydi.</p>
+        </div> : <p className="border-t border-border pt-3 text-xs text-muted">Super admin uchun tashkilot va brending sozlamasi mavjud emas.</p>}
+      </div>}
+    </Modal>
+  </div>
 }
 
-export function SuperAudit() {
-  const q = useQuery({ queryKey: ['admin-audit'], queryFn: async () => (await api.get('/admin/audit/', { params: { page_size: 100 } })).data.results })
+export function SuperAudit() {  const q = useQuery({ queryKey: ['admin-audit'], queryFn: async () => (await api.get('/admin/audit/', { params: { page_size: 100 } })).data.results })
   return <div><PageHeader title="Audit loglar" /><div className="card overflow-x-auto !p-0">{q.isLoading ? <TableSkeleton /> : !q.data?.length ? <Empty /> : (
     <table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-muted"><tr>{['Vaqt', 'Foydalanuvchi', 'Tashkilot', 'Amal', 'Obyekt', 'IP'].map((h) => <th key={h} className="px-3 py-3">{h}</th>)}</tr></thead>
       <tbody>{q.data.map((a: any) => <tr key={a.id} className="border-t border-border"><td className="whitespace-nowrap px-3 py-2">{fmtDate(a.created_at)}</td><td className="px-3 py-2">{a.user_name || '—'}</td><td className="px-3 py-2">{a.organization_name || '—'}</td><td className="px-3 py-2">{a.action}</td><td className="px-3 py-2">{a.entity} #{a.entity_id}</td><td className="px-3 py-2">{a.ip}</td></tr>)}</tbody></table>)}</div></div>

@@ -30,7 +30,7 @@ export default function PublicFeedback() {
   const { token = '' } = useParams()
   const q = useQuery({ queryKey: ['public', token], retry: false, queryFn: async () => (await api.get(`/public/qr/${token}/`)).data })
   const [mode, setMode] = useState<Mode>('home')
-  const [form, setForm] = useState({ category: '', text: '', rating: 0, website: '' })
+  const [form, setForm] = useState({ category: '', text: '', rating: 0, website: '', name: '', from_person: '', to_person: '', reason: '' })
   const [files, setFiles] = useState<File[]>([])
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const [result, setResult] = useState<{ number?: string; queued?: boolean }>({})
@@ -73,6 +73,10 @@ export default function PublicFeedback() {
     e.preventDefault(); setErr(''); setBusy(true)
     const payload: any = { type: mode, category: form.category, text: form.text, website: form.website }
     if (mode === 'rating') payload.rating = form.rating
+    if (o.collect_name) payload.name = form.name
+    if (mode === 'complaint' && o.collect_complaint_context) {
+      payload.from_person = form.from_person; payload.to_person = form.to_person; payload.reason = form.reason
+    }
     try {
       const r = await send(token, keyRef.current, payload, files)
       if (r.number) { localStorage.setItem(lastKey, r.number); setLastNumber(r.number) }
@@ -82,7 +86,7 @@ export default function PublicFeedback() {
       else setErr(ex?.response ? errMsg(ex) : 'Internet aloqasi yo‘q. Rasm bilan yuborish uchun internet kerak.')
     } finally { setBusy(false) }
   }
-  const reset = () => { setForm({ category: '', text: '', rating: 0, website: '' }); setFiles([]); keyRef.current = uuid(); setMode('home'); setErr('') }
+  const reset = () => { setForm({ category: '', text: '', rating: 0, website: '', name: '', from_person: '', to_person: '', reason: '' }); setFiles([]); keyRef.current = uuid(); setMode('home'); setErr('') }
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-white">
@@ -114,7 +118,7 @@ export default function PublicFeedback() {
             {actions.map(([m, l, I]: any) => (
               <button key={m} onClick={() => setMode(m)} className="flex w-full items-center gap-3 rounded-2xl border border-border p-4 text-left active:scale-[.99]"><span className="rounded-xl p-2 text-white" style={{ background: brand }}><I size={22} /></span><span className="font-medium">{l}</span></button>))}
           </div>
-          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted"><Lock size={13} />Sizning kimligingiz bizga ko‘rinmaydi.</p>
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted"><Lock size={13} />{o.collect_name ? 'Ismingiz faqat murojaatni ko‘rib chiqish uchun ishlatiladi.' : 'Sizning kimligingiz bizga ko‘rinmaydi.'}</p>
           {(o.contact_phone || o.contact_email || o.address) && <div className="mt-6 rounded-xl bg-slate-50 p-3 text-sm text-muted"><p className="mb-1 flex items-center gap-1 font-medium text-ink"><Phone size={14} />Aloqa</p>{o.contact_phone && <p><a href={`tel:${o.contact_phone}`}>{o.contact_phone}</a></p>}{o.contact_email && <p>{o.contact_email}</p>}{o.address && <p>{o.address}</p>}</div>}
         </>}
 
@@ -135,6 +139,12 @@ export default function PublicFeedback() {
           <form className="space-y-3" onSubmit={submit}>
             <button type="button" onClick={() => setMode('home')} className="text-sm text-muted">← Orqaga</button>
             <h2 className="text-lg font-semibold">{mode === 'suggestion' ? 'Taklif yuborish' : mode === 'complaint' ? 'Shikoyat yuborish' : 'Xizmatni baholash'}</h2>
+            {o.collect_name && <input className="input !py-3" placeholder={o.require_name ? 'Ism-familiya' : 'Ism-familiya (ixtiyoriy)'} required={o.require_name} maxLength={100} value={form.name} onChange={(e) => set('name', e.target.value)} />}
+            {mode === 'complaint' && o.collect_complaint_context && <>
+              <input className="input !py-3" placeholder={o.require_complaint_context ? 'Kim tomondan' : 'Kim tomondan (ixtiyoriy)'} required={o.require_complaint_context} maxLength={100} value={form.from_person} onChange={(e) => set('from_person', e.target.value)} />
+              <input className="input !py-3" placeholder={o.require_complaint_context ? 'Kimga' : 'Kimga (ixtiyoriy)'} required={o.require_complaint_context} maxLength={100} value={form.to_person} onChange={(e) => set('to_person', e.target.value)} />
+              <input className="input !py-3" placeholder={o.require_complaint_context ? 'Sabab' : 'Sabab (ixtiyoriy)'} required={o.require_complaint_context} maxLength={300} value={form.reason} onChange={(e) => set('reason', e.target.value)} />
+            </>}
             {mode === 'rating' && <div className="flex justify-center gap-2 py-2">{[1, 2, 3, 4, 5].map((n) => <button type="button" key={n} onClick={() => set('rating', n)} aria-label={`${n} yulduz`}><Star size={38} fill={n <= form.rating ? '#F59E0B' : 'none'} color={n <= form.rating ? '#F59E0B' : '#CBD5E1'} /></button>)}</div>}
             {mode !== 'rating' && <select className="input !py-3" value={form.category} onChange={(e) => set('category', e.target.value)}><option value="">Kategoriya</option>{cats.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>}
             <textarea className="input !py-3" rows={mode === 'rating' ? 3 : 5} required={mode !== 'rating'} minLength={mode === 'rating' ? 0 : 5} maxLength={3000} placeholder={mode === 'rating' ? 'Izoh (ixtiyoriy)' : mode === 'suggestion' ? 'Taklifingiz matni' : 'Shikoyat matni'} value={form.text} onChange={(e) => set('text', e.target.value)} />
@@ -143,7 +153,7 @@ export default function PublicFeedback() {
             {!!files.length && <div className="flex flex-wrap gap-2">{files.map((f, i) => <FileThumb key={`${f.name}-${i}`} file={f} onRemove={() => setFiles(files.filter((_, j) => j !== i))} />)}</div>}
             {err && <p className="text-sm text-red-600">{err}</p>}
             <button className="w-full rounded-xl py-3.5 font-medium text-white disabled:opacity-50" style={{ background: brand }} disabled={busy || (mode === 'rating' && !form.rating)}>{busy ? 'Yuborilmoqda...' : 'Yuborish'}</button>
-            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted"><Lock size={13} />Sizning kimligingiz bizga ko‘rinmaydi. Ro‘yxatdan o‘tish shart emas.</p>
+            <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted"><Lock size={13} />{o.collect_name ? 'Ismingiz faqat murojaatni ko‘rib chiqish uchun ishlatiladi.' : 'Sizning kimligingiz bizga ko‘rinmaydi. Ro‘yxatdan o‘tish shart emas.'}</p>
           </form>)}
 
         {mode === 'done' && <div className="py-8 text-center">
@@ -153,11 +163,11 @@ export default function PublicFeedback() {
           <button className="mt-6 w-full rounded-xl py-3.5 font-medium text-white" style={{ background: brand }} onClick={reset}>Bosh sahifaga qaytish</button>
         </div>}
       </div>
-      <footer className="border-t border-border py-4 text-center text-xs text-muted">
+      {o.show_branding && <footer className="border-t border-border py-4 text-center text-xs text-muted">
         <img src="/logo.png" alt="WEBSTORM IT" className="mx-auto mb-1.5 h-8 w-auto object-contain" />
         <p>Dastur <span className="font-semibold text-ink">WEBSTORM IT</span> kompaniyasiga tegishli</p>
         <Link to="/about" className="text-primary">Dastur haqida</Link>
-      </footer>
+      </footer>}
     </div>
   )
 }
@@ -171,6 +181,7 @@ export function Track() {
   return (
     <div className="mx-auto max-w-md p-5"><h1 className="text-lg font-semibold">{t.organization}</h1><p className="font-mono text-sm text-muted">{t.number} · {t.type}</p>
       <p className="mt-3">Holat: <b>{t.status_display}</b></p>
+      {t.resolution_note && <div className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm"><p className="text-xs font-medium text-emerald-700">Hal qilindi</p><p className="mt-1 whitespace-pre-wrap">{t.resolution_note}</p></div>}
       <div className="mt-4 space-y-2">{t.replies.map((r: any, i: number) => <div key={i} className="rounded-lg bg-blue-50 p-3 text-sm">{r.text}</div>)}{!t.replies.length && <p className="text-sm text-muted">Hozircha javob yo‘q.</p>}</div></div>
   )
 }

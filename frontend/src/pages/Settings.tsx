@@ -72,18 +72,35 @@ function OrgSettings() {
   )
 }
 
+const parseChatIds = (s: string) => Array.from(new Set(s.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean)))
+
 function Integrations() {
   const { can } = useAuth(); const w = can('owner', 'admin')
-  const [tg, setTg] = useState<any>({ chat_id: '', enabled: false, bot_token: '' }); const [em, setEm] = useState<any>({ recipients: '', enabled: false })
-  useEffect(() => { api.get('/integrations/telegram/').then((r) => setTg((x: any) => ({ ...x, ...r.data }))); api.get('/integrations/email/').then((r) => setEm(r.data)) }, [])
+  const [tg, setTg] = useState<any>({ enabled: false, bot_token: '' })
+  const [tgText, setTgText] = useState('')
+  const [em, setEm] = useState<any>({ recipients: '', enabled: false })
+  useEffect(() => {
+    api.get('/integrations/telegram/').then((r) => { setTg((x: any) => ({ ...x, ...r.data, bot_token: '' })); setTgText((r.data.chat_ids || []).join('\n')) })
+    api.get('/integrations/email/').then((r) => setEm(r.data))
+  }, [])
+  const ids = parseChatIds(tgText)
+  const removeId = (id: string) => setTgText(ids.filter((x) => x !== id).join('\n'))
   const run = (p: Promise<any>, ok: string) => p.then((r) => toast.success(r.data?.detail || ok)).catch((e) => toast.error(errMsg(e)))
+  const saveTg = () => run(api.put('/integrations/telegram/', { ...tg, chat_ids: ids }).then((r) => {
+    setTg((x: any) => ({ ...x, ...r.data, bot_token: '' })); setTgText((r.data.chat_ids || []).join('\n')); return r
+  }), 'Saqlandi')
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="card space-y-2"><h3 className="font-medium">Telegram bot</h3>
         <input className="input" type="password" placeholder={tg.has_token ? 'Token saqlangan (o‘zgartirish uchun yangisini kiriting)' : 'Bot token'} disabled={!w} onChange={(e) => setTg({ ...tg, bot_token: e.target.value })} />
-        <input className="input" placeholder="Chat ID" disabled={!w} value={tg.chat_id} onChange={(e) => setTg({ ...tg, chat_id: e.target.value })} />
+        <label className="label">Chat ID’lar (cheksiz)</label>
+        <textarea className="input font-mono text-xs" rows={3} placeholder={'Har bir chat ID yangi qator yoki vergul bilan\nmasalan: 123456789, -987654321'} disabled={!w} value={tgText} onChange={(e) => setTgText(e.target.value)} />
+        <div className="flex flex-wrap gap-1.5">
+          {ids.map((id) => <span key={id} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs">{id}<button type="button" onClick={() => removeId(id)} disabled={!w} aria-label="O‘chirish" className="text-muted hover:text-red-600">×</button></span>)}
+          {!ids.length && <span className="text-xs text-muted">Chat ID qo‘shilmagan</span>}
+        </div>
         <Toggle label="Yoqilgan" checked={tg.enabled} onChange={(v: boolean) => setTg({ ...tg, enabled: v })} />
-        {w && <div className="flex gap-2"><button className="btn-primary" onClick={() => run(api.put('/integrations/telegram/', tg).then((r) => (setTg({ ...tg, ...r.data, bot_token: '' }), r)), 'Saqlandi')}>Saqlash</button><button className="btn-ghost" onClick={() => run(api.post('/integrations/telegram/'), 'Yuborildi')}>Test xabar</button></div>}</div>
+        {w && <div className="flex gap-2"><button className="btn-primary" onClick={saveTg}>Saqlash</button><button className="btn-ghost" onClick={() => run(api.post('/integrations/telegram/'), 'Yuborildi')}>Test xabar</button></div>}</div>
       <div className="card space-y-2"><h3 className="font-medium">Email bildirishnomalar</h3>
         <input className="input" placeholder="a@x.uz, b@x.uz" disabled={!w} value={em.recipients} onChange={(e) => setEm({ ...em, recipients: e.target.value })} />
         <Toggle label="Yoqilgan" checked={em.enabled} onChange={(v: boolean) => setEm({ ...em, enabled: v })} />

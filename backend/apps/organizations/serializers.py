@@ -23,7 +23,8 @@ class OrgSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationSettings
         fields = ['primary_color', 'welcome_text', 'contact_phone', 'contact_email', 'address',
-                  'social_links', 'menu_links']
+                  'social_links', 'menu_links', 'collect_name', 'require_name', 'collect_complaint_context',
+                  'require_complaint_context', 'collect_resolution', 'require_resolution', 'show_resolution']
 
     def validate_primary_color(self, v):
         import re

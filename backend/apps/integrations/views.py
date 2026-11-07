@@ -1,3 +1,5 @@
+import re
+
 import requests
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,6 +9,19 @@ from apps.organizations.permissions import OrgRolePermission, get_membership
 from .models import EmailIntegration, TelegramIntegration
 
 
+def split_chat_ids(value):
+    if isinstance(value, (list, tuple)):
+        parts = [str(v) for v in value]
+    else:
+        parts = re.split(r'[\s,;]+', str(value or ''))
+    result = []
+    for part in parts:
+        part = part.strip()
+        if part and part not in result:
+            result.append(part)
+    return result
+
+
 class TelegramView(APIView):
     permission_classes = [IsAuthenticated, OrgRolePermission]
 
@@ -14,7 +29,7 @@ class TelegramView(APIView):
         return TelegramIntegration.objects.get_or_create(organization=get_membership(request).organization)[0]
 
     def _out(self, o):  # bot_token hech qachon qaytarilmaydi
-        return {'enabled': o.enabled, 'chat_id': o.chat_id, 'has_token': bool(o.bot_token)}
+        return {'enabled': o.enabled, 'chat_ids': o.recipient_ids(), 'has_token': bool(o.bot_token)}
 
     def get(self, request):
         return Response(self._out(self._obj(request)))
@@ -24,24 +39,35 @@ class TelegramView(APIView):
         d = request.data
         if d.get('bot_token'):
             o.bot_token = str(d['bot_token']).strip()
-        if 'chat_id' in d:
-            o.chat_id = str(d['chat_id']).strip()
+        if 'chat_ids' in d or 'chat_id' in d:  # chat_id — eski moslik uchun
+            ids = split_chat_ids(d.get('chat_ids', d.get('chat_id')))
+            o.chat_ids = '\n'.join(ids)
+            o.chat_id = ''
         if 'enabled' in d:
             o.enabled = bool(d['enabled'])
         o.save()
         audit_log(request, 'update', o, entity='TelegramIntegration')
         return Response(self._out(o))
 
-    def post(self, request):  # test xabar
+    def post(self, request):  # test xabar — barcha chat ID'larga
         o = self._obj(request)
-        if not (o.bot_token and o.chat_id):
-            return Response({'detail': 'Bot token va chat ID kiriting'}, status=400)
-        try:
-            r = requests.post(f'https://api.telegram.org/bot{o.bot_token}/sendMessage',
-                              json={'chat_id': o.chat_id, 'text': '✅ QR Feedback: test xabar'}, timeout=10)
-        except Exception:
-            return Response({'detail': 'Telegramga ulanib bo‘lmadi'}, status=502)
-        return Response({'ok': r.ok, 'detail': 'Yuborildi' if r.ok else 'Telegram xatosi: token yoki chat ID noto‘g‘ri'}, status=200 if r.ok else 400)
+        ids = o.recipient_ids()
+        if not (o.bot_token and ids):
+            return Response({'detail': 'Bot token va kamida bitta chat ID kiriting'}, status=400)
+        results = {}
+        for chat_id in ids:
+            try:
+                r = requests.post(f'https://api.telegram.org/bot{o.bot_token}/sendMessage',
+                                  json={'chat_id': chat_id, 'text': '✅ QR Feedback: test xabar'}, timeout=10)
+                results[chat_id] = r.ok
+            except Exception:
+                results[chat_id] = False
+        ok = bool(results) and all(results.values())
+        sent = sum(1 for v in results.values() if v)
+        return Response({
+            'ok': ok, 'results': results,
+            'detail': f'{sent}/{len(results)} chat ID ga yuborildi' if ok else 'Ba’zi chat ID’larga yuborilmadi: token yoki chat ID noto‘g‘ri',
+        }, status=200 if ok else 400)
 
 
 class EmailView(APIView):

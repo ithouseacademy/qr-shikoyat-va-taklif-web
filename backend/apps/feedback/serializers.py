@@ -20,8 +20,8 @@ class FeedbackListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = ['id', 'number', 'type', 'type_display', 'category', 'category_name', 'branch', 'branch_name',
-                  'department', 'department_name', 'name', 'phone', 'text', 'rating', 'status', 'status_display',
-                  'assigned_to', 'assigned_to_name', 'attachments', 'created_at']
+                  'department', 'department_name', 'name', 'phone', 'from_person', 'to_person', 'reason', 'text',
+                  'rating', 'status', 'status_display', 'assigned_to', 'assigned_to_name', 'attachments', 'created_at']
 
     def get_attachments(self, obj):
         return [a.file.url for a in obj.attachments.all()]
@@ -50,7 +50,7 @@ class FeedbackDetailSerializer(FeedbackListSerializer):
     qr_name = serializers.CharField(source='qr.name', default='', read_only=True)
 
     class Meta(FeedbackListSerializer.Meta):
-        fields = FeedbackListSerializer.Meta.fields + ['comments', 'history', 'qr_name', 'resolved_at']
+        fields = FeedbackListSerializer.Meta.fields + ['comments', 'history', 'qr_name', 'resolved_at', 'resolution_note']
 
 
 class PublicFeedbackSerializer(serializers.Serializer):
@@ -58,12 +58,15 @@ class PublicFeedbackSerializer(serializers.Serializer):
     category = serializers.IntegerField(required=False, allow_null=True)
     name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    from_person = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    to_person = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    reason = serializers.CharField(max_length=300, required=False, allow_blank=True)
     text = serializers.CharField(max_length=3000, required=False, allow_blank=True)
     rating = serializers.IntegerField(min_value=1, max_value=5, required=False, allow_null=True)
 
     def validate(self, a):
         from django.utils.html import strip_tags
-        for k in ('name', 'phone', 'text'):
+        for k in ('name', 'phone', 'text', 'from_person', 'to_person', 'reason'):
             if k in a:
                 a[k] = strip_tags(a[k]).strip()
         if a['type'] == 'rating':
@@ -73,4 +76,12 @@ class PublicFeedbackSerializer(serializers.Serializer):
             if len(a.get('text', '')) < 5:
                 raise serializers.ValidationError({'text': 'Matn kamida 5 ta belgidan iborat bo‘lsin'})
             a['rating'] = None
+        cfg = getattr(self.context.get('org'), 'settings', None)
+        if cfg:
+            if cfg.collect_name and cfg.require_name and not a.get('name'):
+                raise serializers.ValidationError({'name': 'Ism-familiyani kiriting'})
+            if a['type'] == 'complaint' and cfg.collect_complaint_context and cfg.require_complaint_context:
+                missing = {k: 'To‘ldirish majburiy' for k in ('from_person', 'to_person', 'reason') if not a.get(k)}
+                if missing:
+                    raise serializers.ValidationError(missing)
         return a

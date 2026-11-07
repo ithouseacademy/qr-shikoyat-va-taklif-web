@@ -5,6 +5,7 @@ export interface Paged<T> { count: number; next: string | null; previous: string
 export interface Feedback {
   id: number; number: string; type: 'suggestion' | 'complaint' | 'rating'; type_display: string; category_name: string
   branch_name: string; department_name: string; name: string; phone: string; text: string; rating: number | null
+  from_person?: string; to_person?: string; reason?: string; resolution_note?: string
   status: string; status_display: string; assigned_to: number | null; assigned_to_name: string; created_at: string
   comments?: { id: number; author_name: string; text: string; is_internal: boolean; created_at: string }[]
   history?: { id: number; changed_by_name: string; from_status: string; to_status: string; note: string; created_at: string }[]

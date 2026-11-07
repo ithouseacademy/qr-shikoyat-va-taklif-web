@@ -1,6 +1,6 @@
 # QR Feedback Platform — loyiha qo‘llanmasi
 
-> **Versiya:** 1.2.0 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
+> **Versiya:** 1.4.1 · **Egasi va ishlab chiqaruvchi:** WEBSTORM IT
 > Bu fayl loyiha haqidagi to‘liq ma’lumot, versiyalash qoidalari va kelgusi AI/developer uchun
 > yo‘riqnoma. Har qanday o‘zgarishdan oldin shu faylni o‘qing va oxirida tegishli bo‘limlarni yangilang.
 
@@ -114,7 +114,7 @@ npm run build
 | Kalit | Izoh |
 |---|---|
 | `SECRET_KEY` | Django maxfiy kaliti |
-| `APP_VERSION` | Ixtiyoriy; berilmasa `1.2.0` |
+| `APP_VERSION` | Ixtiyoriy; berilmasa `1.3.0` |
 | `DEBUG` | `1` lokal, `0` production |
 | `ALLOWED_HOSTS` | Vergul bilan |
 | `FRONTEND_URL` | Standart QR public URL va CORS uchun (default `https://qrfeedback.webstorm.uz`) |
@@ -151,11 +151,16 @@ Tenant izolyatsiyasi: `TenantMixin` queryset’ni `organization` bo‘yicha filt
 
 - `accounts.User` — email login, `full_name`, `phone`, `is_superuser`.
 - `organizations.Organization` — `name`, `slug`, `logo`, `status`.
-- `organizations.OrganizationSettings` — `primary_color`, `welcome_text`, aloqa maydonlari, `social_links` (JSON list).
+- `organizations.OrganizationSettings` — `primary_color`, `welcome_text`, aloqa maydonlari, `social_links` (JSON list);
+  `show_branding` (mijoz sahifasidagi WEBSTORM IT footerini ko‘rsatish, faqat super admin o‘zgartiradi);
+  forma sozlamalari: `collect_name`, `require_name`, `collect_complaint_context`, `require_complaint_context`,
+  `collect_resolution`, `require_resolution`, `show_resolution`.
 - `organizations.OrganizationMembership` — user ↔ organization + `role`.
 - `branches.Branch`, `departments.Department`.
 - `qr_codes.QRCode` — `token`, `color`, `bg_color`, `use_logo`, `is_active`; `QRScan` — skanerlashlar.
-- `feedback.Feedback` — `type`, `status`, `category`, `text`, `rating`, `number`, `idempotency_key`, bog‘lanishlar.
+- `feedback.Feedback` — `type`, `status`, `category`, `text`, `rating`, `name`, `from_person`, `to_person`, `reason`,
+  `resolution_note`, `number`, `idempotency_key`, bog‘lanishlar.
+- `integrations.TelegramIntegration` — `bot_token`, `chat_ids` (cheksiz chat ID), `enabled`; `recipient_ids()`.
 - `feedback.FeedbackAttachment` — `FileField` (rasm yoki video).
 - `feedback.FeedbackComment`, `FeedbackStatusHistory`.
 - `notifications.Notification`, `PushSubscription`, `NotificationPreference`.
@@ -184,7 +189,7 @@ Boshqa:
 - `analytics/summary/`, `analytics/reports/`, `analytics/export/`
 - `notifications/`, `notifications/unread_count/`, `notifications/mark_all_read/`, `notifications/<id>/read/`
 - `notification-preferences/`, `push/vapid-key/`, `push/subscribe/`, `push/unsubscribe/`, `push/devices/`
-- `integrations/telegram/`, `integrations/email/`
+- `integrations/telegram/` — `chat_ids` (matn yoki ro‘yxat), `enabled`, test barcha ID’larga; `integrations/email/`
 - `GET version/` — `{name, owner, version}`
 
 WebSocket: `ws/notifications/?token=<JWT>`.
@@ -230,6 +235,15 @@ Super admin: `/super`, `/super/organizations`, `/super/users`, `/super/audit`.
   ro‘yxatidagi domenlarga ruxsat beriladi; aks holda `FRONTEND_URL` ishlatiladi.
 - QR rasm/PDF ham `public_url_for(request)` orqali bir xil domenni oladi.
 
+### Mijoz formasi maydonlari
+- `/app/settings` dagi “Mijoz formasi” bo‘limi olib tashlangan; maydonlar modelda qoladi.
+- Standart holatda barcha maydonlar o‘chirilgan (murojaat anonim).
+- `collect_name` — mijozdan ism-familiya so‘raladi; `require_name` — majburiy.
+- `collect_complaint_context` — shikoyatda “kim tomondan / kimga / sabab”; `require_complaint_context` — majburiy.
+- `collect_resolution` — admin statusni “Hal qilindi” qilganda izoh yozadi; `require_resolution` — majburiy;
+  `show_resolution` — izoh mijozning `/track/<number>` sahifasida ko‘rinadi.
+- Maydon o‘chirilgan bo‘lsa, mijoz yuborgan qiymat saqlanmaydi (murojaat avvalgidek anonim).
+
 ### Media URL’lar (muhim!)
 - Backend har doim **nisbiy** `/media/...` URL qaytaradi. `build_absolute_uri` ishlatmang —
   Docker/Nginx va telefon sinovida `localhost` muammosi chiqadi.
@@ -256,6 +270,7 @@ Super admin: `/super`, `/super/organizations`, `/super/users`, `/super/audit`.
 - Logo: `frontend/public/logo.png` (WEBSTORM IT). PWA ikonkalari: `frontend/public/icons/`.
 - Sidebar tepasida oq fonli logo, pastda `v{APP_VERSION} · WEBSTORM IT`.
 - Mijoz sahifasi footerida logo + “Dastur WEBSTORM IT kompaniyasiga tegishli” + `/about`.
+  Super admin `/super/users` da foydalanuvchini bosib, o‘sha tashkilot uchun brendingni o‘chirsa, footer umuman ko‘rinmaydi (`OrganizationSettings.show_branding`).
 - Dizayn **minimal va sodda** bo‘lishi kerak. Foydalanuvchi gradient/glassmorphism va iOS-uslub
   dizaynlarni rad etgan — mavjud oq, toza uslubni saqlang.
 - Matnlar o‘zbek tilida (lotin). Emoji ishlatilmaydi (foydalanuvchi so‘ramasa).
@@ -271,6 +286,10 @@ Super admin: `/super`, `/super/organizations`, `/super/users`, `/super/audit`.
 | Logo va PWA ikonkalari | `frontend/public/logo.png`, `frontend/public/icons/*`, `manifest.json`, `index.html` |
 | Ijtimoiy tarmoqlar | `frontend/src/pages/SocialNetworks.tsx`, `frontend/src/utils/social.tsx`, `organizations/serializers.py` |
 | Murojaat UI | `frontend/src/pages/PublicFeedback.tsx`, `Feedbacks.tsx`, `FeedbackDetail.tsx` |
+| Mijoz formasi maydonlari | `OrganizationSettings` (`PublicFeedback.tsx`); admin UI olib tashlangan |
+| WEBSTORM IT footerini yashirish | `OrganizationSettings.show_branding`, `/super/users` (foydalanuvchi oynasi), `feedback/views.py`, `PublicFeedback.tsx` |
+| Hal qilindi izohi | `Feedback.resolution_note`, `feedback/views.py` (`set_status`), `FeedbackDetail.tsx` |
+| Telegram chat ID’lar | `integrations/models.py` (`chat_ids`), `integrations/tasks.py`, `Settings.tsx` |
 | Fayl limitlari | `backend/apps/feedback/uploads.py`, `frontend/src/pages/PublicFeedback.tsx` |
 | Bildirishnoma matnlari | `backend/apps/feedback/services.py`, `views.py` (`notify(...)`) |
 | Push/service worker | `frontend/src/services/push.ts`, `frontend/public/sw.js`, `backend/apps/notifications/` |
@@ -316,6 +335,9 @@ Versiya quyidagi joylarda bir xil bo‘lishi shart:
 
 | Versiya | Sana | Izoh |
 |---|---|---|
+| 1.4.1 | 2026-11-07 | `/app/settings` dan “Mijoz formasi” bo‘limi olib tashlandi |
+| 1.4.0 | 2026-11-07 | Super admin foydalanuvchi oynasidan tashkilot brending footerini o‘chirishi mumkin (`show_branding`) |
+| 1.3.0 | 2026-11-06 | Cheksiz Telegram chat ID, mijoz formasi maydonlari va hal qilindi izohi |
 | 1.2.0 | 2026-11-06 | QR havolalar admin kirgan frontend domeni bo‘yicha quriladi |
 | 1.1.0 | 2026-10-31 | Telegram botga murojaat rasm/videolarini yuborish |
 | 1.0.0 | 2026-10-30 | Birinchi rasmiy versiya: multi-tenant, QR, murojaatlar, fayllar, ijtimoiy tarmoqlar, PWA, push, versiyalash |

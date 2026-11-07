@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
@@ -13,11 +13,15 @@ export default function FeedbackDetail() {
   const { id } = useParams(); const qc = useQueryClient(); const { can } = useAuth()
   const [text, setText] = useState(''); const [internal, setInternal] = useState(true)
   const q = useQuery({ queryKey: ['feedbacks', 'detail', id], queryFn: async () => (await api.get<Feedback>(`/feedbacks/${id}/`)).data })
+  const org = useQuery({ queryKey: ['org'], queryFn: async () => (await api.get('/organization/')).data })
+  const [statusValue, setStatusValue] = useState(''); const [resNote, setResNote] = useState('')
+  useEffect(() => { if (q.data) { setStatusValue(q.data.status); setResNote(q.data.resolution_note || '') } }, [q.data?.id, q.data?.status, q.data?.resolution_note])
   const staff = useQuery({ queryKey: ['staff', 'all'], enabled: can('owner', 'admin', 'manager'), queryFn: async () => (await api.get('/staff/', { params: { page_size: 100 } })).data.results })
   const done = () => { qc.invalidateQueries({ queryKey: ['feedbacks'] }); qc.invalidateQueries({ queryKey: ['summary'] }) }
   const act = (url: string, body: any, ok?: string) => api.post(`/feedbacks/${id}/${url}/`, body).then(() => { done(); ok && toast.success(ok) }).catch((e) => toast.error(errMsg(e)))
   const comment = useMutation({ mutationFn: () => api.post(`/feedbacks/${id}/comments/`, { text, is_internal: internal }), onSuccess: () => { setText(''); done(); toast.success('Yuborildi') }, onError: (e) => toast.error(errMsg(e)) })
   const f = q.data
+  const cfg = org.data?.settings
   if (q.isLoading || !f) return <Skeleton className="h-64" />
   return (
     <div>
@@ -30,7 +34,13 @@ export default function FeedbackDetail() {
             <p className="whitespace-pre-wrap">{f.text || '—'}</p>
             {!!f.attachments?.length && <div className="mt-3 flex flex-wrap gap-2">{f.attachments.map((a) => isVideoUrl(a) ? <video key={a} src={mediaUrl(a)} controls playsInline className="h-40 w-64 rounded-lg border border-border bg-black" /> : <a key={a} href={mediaUrl(a)} target="_blank" rel="noreferrer"><img src={mediaUrl(a)} className="h-24 w-24 rounded-lg border border-border object-cover" /></a>)}</div>}
             <p className="mt-3 text-sm text-muted">Mijoz: {f.name || 'Anonim'} {f.phone && `· ${f.phone}`}</p>
+            {(f.from_person || f.to_person || f.reason) && <div className="mt-2 grid gap-1 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-3">
+              {f.from_person && <p><span className="text-muted">Kim tomondan:</span> {f.from_person}</p>}
+              {f.to_person && <p><span className="text-muted">Kimga:</span> {f.to_person}</p>}
+              {f.reason && <p><span className="text-muted">Sabab:</span> {f.reason}</p>}
+            </div>}
           </div>
+          {f.resolution_note && <div className="card"><h3 className="mb-1 font-medium">Hal qilindi izohi</h3><p className="whitespace-pre-wrap text-sm">{f.resolution_note}</p></div>}
           <div className="card">
             <h3 className="mb-3 font-medium">Izohlar va javoblar</h3>
             <div className="space-y-2">{f.comments?.map((c) => (
@@ -48,7 +58,16 @@ export default function FeedbackDetail() {
         </div>
         <div className="space-y-4">
           <div className="card space-y-3">
-            <div><label className="label">Holat</label><select className="input" value={f.status} onChange={(e) => act('set_status', { status: e.target.value }, 'Holat yangilandi')}>{Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+            <div><label className="label">Holat</label><select className="input" value={statusValue || f.status} onChange={(e) => {
+              const v = e.target.value; setStatusValue(v)
+              if (v === 'resolved' && cfg?.collect_resolution) return
+              act('set_status', { status: v }, 'Holat yangilandi')
+            }}>{Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+            {cfg?.collect_resolution && statusValue === 'resolved' && <div className="space-y-2 border-t border-border pt-3">
+              <label className="label">Qanday hal qilindi</label>
+              <textarea className="input" rows={3} value={resNote} onChange={(e) => setResNote(e.target.value)} placeholder="Hal qilish izohi..." />
+              <button className="btn-primary w-full" disabled={cfg.require_resolution && !resNote.trim()} onClick={() => act('set_status', { status: 'resolved', resolution_note: resNote }, 'Saqlandi')}>Saqlash</button>
+            </div>}
             {can('owner', 'admin', 'manager') && <div><label className="label">Mas‘ul xodim</label>
               <select className="input" value={f.assigned_to ?? ''} onChange={(e) => act('assign', { user_id: e.target.value || null }, 'Biriktirildi')}><option value="">— biriktirilmagan —</option>{staff.data?.map((s: any) => <option key={s.user_id} value={s.user_id}>{s.full_name} ({s.role})</option>)}</select></div>}
           </div>

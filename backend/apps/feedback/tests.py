@@ -1,6 +1,7 @@
 from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
 from apps.accounts.models import User
+from apps.organizations.models import OrganizationSettings
 from apps.organizations.services import create_organization
 from apps.qr_codes.models import QRCode
 from .models import Feedback
@@ -63,6 +64,44 @@ class TenantAndPublicTests(APITestCase):
         self.o1.save()
         r = APIClient().post('/api/auth/login/', {'login': 'a@a.uz', 'password': 'Pass12345!'}, format='json')
         self.assertEqual(r.status_code, 403)
+
+    def test_form_fields_ignored_when_disabled(self):
+        r = self.submit(self.qr1, name='Ali', from_person='A', to_person='B', reason='C')
+        self.assertEqual(r.status_code, 201)
+        fb = Feedback.objects.get(organization=self.o1)
+        self.assertEqual(fb.name, '')
+        self.assertEqual((fb.from_person, fb.to_person, fb.reason), ('', '', ''))
+
+    def test_required_form_fields(self):
+        cfg = OrganizationSettings.objects.get(organization=self.o1)
+        cfg.collect_name = cfg.require_name = True
+        cfg.collect_complaint_context = cfg.require_complaint_context = True
+        cfg.save()
+        self.assertEqual(self.submit(self.qr1).status_code, 400)
+        r = self.submit(self.qr1, name='Ali Valiyev', from_person='Ali', to_person='Xodim', reason='Kechikish')
+        self.assertEqual(r.status_code, 201)
+        fb = Feedback.objects.get(organization=self.o1)
+        self.assertEqual((fb.name, fb.from_person, fb.to_person, fb.reason),
+                         ('Ali Valiyev', 'Ali', 'Xodim', 'Kechikish'))
+
+    def test_resolution_note_required_and_visible_to_client(self):
+        self.submit(self.qr1)
+        fb = Feedback.objects.get(organization=self.o1)
+        cfg = OrganizationSettings.objects.get(organization=self.o1)
+        cfg.collect_resolution = cfg.require_resolution = cfg.show_resolution = True
+        cfg.save()
+        c = self.login('a@a.uz')
+        url = f'/api/feedbacks/{fb.id}/set_status/'
+        self.assertEqual(c.post(url, {'status': 'resolved'}, format='json').status_code, 400)
+        r = c.post(url, {'status': 'resolved', 'resolution_note': 'Muammo tuzatildi'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        t = APIClient().get(f'/api/public/track/{fb.number}/')
+        self.assertEqual(t.data['resolution_note'], 'Muammo tuzatildi')
+
+    def test_telegram_multiple_chat_ids(self):
+        from apps.integrations.models import TelegramIntegration
+        tg = TelegramIntegration.objects.create(organization=self.o1, chat_id='111', chat_ids='222\n333, 111', bot_token='x')
+        self.assertEqual(tg.recipient_ids(), ['222', '333', '111'])
 
     def test_employee_sees_only_assigned(self):
         from apps.organizations.models import OrganizationMembership

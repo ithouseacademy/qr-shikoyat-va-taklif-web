@@ -36,7 +36,7 @@ class FeedbackViewSet(TenantMixin, mixins.ListModelMixin, mixins.RetrieveModelMi
     write_roles = ('owner', 'admin', 'manager', 'employee')
     queryset = Feedback.objects.select_related('category', 'branch', 'department', 'assigned_to', 'qr').prefetch_related('attachments')
     filterset_class = FeedbackFilter
-    search_fields = ['number', 'name', 'phone', 'text']
+    search_fields = ['number', 'name', 'phone', 'text', 'from_person', 'to_person', 'reason']
     ordering_fields = ['created_at', 'status', 'rating']
 
     def get_serializer_class(self):
@@ -66,8 +66,18 @@ class FeedbackViewSet(TenantMixin, mixins.ListModelMixin, mixins.RetrieveModelMi
         new = request.data.get('status')
         if new not in dict(Feedback.STATUSES):
             raise ValidationError({'status': 'Noto‘g‘ri holat'})
+        cfg = fb.organization.settings
+        note = str(request.data.get('note', ''))[:300]
+        resolution = str(request.data.get('resolution_note', '')).strip()[:3000]
+        if new == 'resolved' and cfg.collect_resolution:
+            if cfg.require_resolution and not resolution:
+                raise ValidationError({'resolution_note': 'Hal qilindi izohini kiriting'})
+            if resolution:
+                fb.resolution_note = resolution
+                fb.save(update_fields=['resolution_note', 'updated_at'])
+                note = note or resolution[:300]
         if new != fb.status:
-            self._change_status(fb, new, str(request.data.get('note', ''))[:300])
+            self._change_status(fb, new, note)
             audit_log(request, 'status_change', fb, meta={'to': new})
             targets = set(staff_users(fb.organization, ('owner', 'admin')))
             if fb.assigned_to:
@@ -146,7 +156,10 @@ class PublicQRView(APIView):
             'organization': {'name': o.name, 'slug': o.slug, 'logo': o.logo.url if o.logo else None,
                              'primary_color': s.primary_color, 'welcome_text': s.welcome_text, 'contact_phone': s.contact_phone,
                              'contact_email': s.contact_email, 'address': s.address, 'social_links': s.social_links or [],
-                             'menu_links': s.menu_links or []},
+                             'menu_links': s.menu_links or [], 'show_branding': s.show_branding,
+                             'collect_name': s.collect_name, 'require_name': s.require_name,
+                             'collect_complaint_context': s.collect_complaint_context,
+                             'require_complaint_context': s.require_complaint_context, 'show_resolution': s.show_resolution},
             'branch': qr.branch.name if qr.branch else None,
             'department': qr.department.name if qr.department else None,
             'location': qr.location,
@@ -173,9 +186,10 @@ class PublicSubmitView(APIView):
             ex = Feedback.objects.filter(organization=org, idempotency_key=key).first()
             if ex:
                 return Response({'number': ex.number, 'duplicate': True}, status=200)
-        s = PublicFeedbackSerializer(data=request.data)
+        s = PublicFeedbackSerializer(data=request.data, context={'org': org})
         s.is_valid(raise_exception=True)
         d = s.validated_data
+        cfg = org.settings
         cat = None
         if d.get('category'):
             cat = FeedbackCategory.objects.filter(pk=d['category'], organization=org, is_active=True).first()
@@ -183,12 +197,16 @@ class PublicSubmitView(APIView):
                 raise ValidationError({'category': 'Kategoriya noto‘g‘ri'})
         files = request.FILES.getlist('attachments')
         validate_attachments(files)
+        extra = {}
+        if d['type'] == 'complaint' and cfg.collect_complaint_context:
+            extra = {'from_person': d.get('from_person', ''), 'to_person': d.get('to_person', ''),
+                     'reason': d.get('reason', '')}
         try:
             with transaction.atomic():
                 fb = Feedback.objects.create(
                     organization=org, qr=qr, branch=qr.branch, department=qr.department, type=d['type'], category=cat,
-                    name=d.get('name', ''), phone=d.get('phone', ''), text=d.get('text', ''), rating=d.get('rating'),
-                    idempotency_key=key)
+                    name=d.get('name', '') if cfg.collect_name else '', phone=d.get('phone', ''),
+                    text=d.get('text', ''), rating=d.get('rating'), idempotency_key=key, **extra)
                 FeedbackStatusHistory.objects.create(feedback=fb, to_status='new', note='Mijoz yubordi')
                 for f in files:
                     FeedbackAttachment.objects.create(feedback=fb, file=f)
@@ -214,5 +232,7 @@ class PublicTrackView(APIView):
         return Response({
             'number': fb.number, 'organization': fb.organization.name, 'type': fb.get_type_display(),
             'status': fb.status, 'status_display': fb.get_status_display(), 'created_at': fb.created_at,
+            'from_person': fb.from_person, 'to_person': fb.to_person, 'reason': fb.reason,
+            'resolution_note': fb.resolution_note if fb.organization.settings.show_resolution else '',
             'replies': [{'text': c.text, 'created_at': c.created_at} for c in fb.comments.filter(is_internal=False)],
         })
